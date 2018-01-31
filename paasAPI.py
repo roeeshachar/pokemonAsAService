@@ -1,9 +1,11 @@
 import logging
-from logging.handlers import RotatingFileHandler
+from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
 
 from flask import Flask
 from flask import jsonify
-from flask_cache import Cache
+from flask import request
+from flask_caching import Cache
+from werkzeug.exceptions import abort
 
 from common.inputValidator import validateJsonSchema
 from settings import *
@@ -15,13 +17,34 @@ cache = Cache(app, config={'CACHE_TYPE': 'simple'})
 @app.route(URL_PREFIX + "/create", methods=[METHOD_POST])
 @validateJsonSchema(schema=SCHEMA)
 def createNewPokemon():
-    d = "ok"
-    return jsonify(d)
+    jsonObject = request.get_json()
+    pokadexId = jsonObject[POKADEX_ID_FIELD]
+    if elasticSearchWrapper.exists(documentId=pokadexId):
+        return jsonify(message="Pokemon Already Exists With Given Pokadex Id", id=pokadexId,
+                       success=False), STATUS_CODE_CONFLICT
+
+    pokemonDocument = elasticSearchWrapper.create(body=jsonObject, documentId=pokadexId)
+    return jsonify(message="Pokemon Created", pokemon=pokemonDocument, success=True), STATUS_CODE_CREATED
+
+
+@app.route(URL_PREFIX + "/get/<int:id>", methods=[METHOD_GET])
+def getPokemon(id: int):
+    try:
+        pokemon = elasticSearchWrapper.get(documentId=id)
+        return jsonify(pokemon=pokemon, success=True), STATUS_CODE_OK
+    except ElasticSearchNotFoundError as e:
+        return jsonify(message="No Pokemon With Given Pokadex Id", id=id,
+                       success=False), STATUS_CODE_NOT_FOUND
 
 
 @app.route(URL_PREFIX + "/log_test", methods=[METHOD_GET])
 def logTest():
+    try:
+        raise Exception("Sup")
+    except BaseException as e:
+        abort(500, e)
     app.logger.error("An error occurred")
+    return "Log_Test"
 
 
 @app.route(URL_PREFIX + "/cache_test/<string:a>", methods=[METHOD_GET])
@@ -31,18 +54,28 @@ def cacheTest(a):
     return "cacheTest_" + a
 
 
-@app.errorhandler(404)
+@app.errorhandler(STATUS_CODE_NOT_FOUND)
 def pageNotFound(error):
-    return jsonify(message="End Point Not Found"), 404
+    return jsonify(message="End Point Not Found"), STATUS_CODE_NOT_FOUND
 
 
-@app.errorhandler(400)
+@app.errorhandler(STATUS_CODE_BAD_REQUEST)
 def badRequest(error):
-    return jsonify(message=error.name, errors=error.description), 400
+    return jsonify(message=error.name, errors=error.description, success=False), STATUS_CODE_BAD_REQUEST
+
+
+@app.errorhandler(STATUS_CODE_INTERNAL_ERROR)
+def internalError(error):
+    try:
+        exception = error.description  # chained exception
+    except AttributeError as e:
+        exception = error
+    app.logger.error(exceptionToString(exception))
+    return jsonify(message="Internal Error Occurred", success=False), STATUS_CODE_INTERNAL_ERROR
 
 
 if __name__ == "__main__":
-    handler = RotatingFileHandler(LOG_FILE, maxBytes=10000, backupCount=1)
+    handler = TimedRotatingFileHandler(LOG_FILE, when="d", backupCount=1)
     handler.setLevel(logging.INFO)
     app.logger.addHandler(handler)
     app.run()
