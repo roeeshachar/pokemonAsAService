@@ -1,0 +1,13 @@
+cache==1.0.3
+click==6.7
+elasticsearch==6.1.1
+Flask==0.12.2
+Flask-Cache==0.13.1
+itsdangerous==0.24
+Jinja2==2.10
+jsonschema==2.6.0
+MarkupSafe==1.0
+typing==3.6.4
+urllib3==1.22
+Werkzeug==0.14.1
+WTForms==2.1
