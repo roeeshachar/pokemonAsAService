@@ -1,3 +1,5 @@
+from typing import List
+
 from common.elasticSearchConfigurations import ElasticSearchConfigurations
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import NotFoundError as ElasticSearchNotFoundError
@@ -5,6 +7,7 @@ from elasticsearch.exceptions import NotFoundError as ElasticSearchNotFoundError
 
 class ElasticSearchWrapper(object):
     SOURCE = "_source"
+    HITS = "hits"
     TEXT = "text"
     PROPERTIES = "properties"
     MAPPING = "mappings"
@@ -25,27 +28,35 @@ class ElasticSearchWrapper(object):
 
     def get(self, documentId):
         try:
-            ans = self.es.get(index=self.configurations.index, doc_type=self.configurations.docType, id=documentId)
-            return ans[self.SOURCE]
+            return self.es.get_source(index=self.configurations.index, doc_type=self.configurations.docType,
+                                      id=documentId)
         except ElasticSearchNotFoundError as e:
             raise e
 
     @classmethod
-    def constructPrefixFieldQuery(cls, field: str, prefix: str):
-        return {
+    def constructPrefixFieldQuery(cls, fields: List[str], prefix: str):
+        prefixes = {
             "query": {
-                "prefix": {
-                    "nickname": "ha"
+                "bool": {
+                    "should": [
+                        {
+                            "prefix": {
+                                field: prefix,
+                            }
+                        } for field in fields
+                        ]
                 }
             }
-
         }
+
+        return prefixes
 
     def getByPrefix(self, prefix: str):
         try:
-
-            ans = self.es.get(index=self.configurations.index, doc_type=self.configurations.docType, id=documentId)
-            return ans[self.SOURCE]
+            textFields = self.getTextFields()
+            ans = self.es.search(index=self.configurations.index, doc_type=self.configurations.docType,
+                                 body=self.constructPrefixFieldQuery(fields=textFields, prefix=prefix))
+            return [elm[self.SOURCE] for elm in ans[self.HITS][self.HITS]]
         except ElasticSearchNotFoundError as e:
             raise e
 
