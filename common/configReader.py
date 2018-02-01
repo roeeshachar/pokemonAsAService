@@ -6,6 +6,9 @@ from typing import Any, Tuple
 
 
 class ConfigReader(object):
+    """
+    Handles Read/Write to config files
+    """
     @classmethod
     def _deserialize(cls, value: str):
         return json.loads(value)
@@ -16,6 +19,13 @@ class ConfigReader(object):
 
     @classmethod
     def _getConfigValue(cls, config: configparser.ConfigParser, section: str, key: str):
+        """
+
+        :param config:
+        :param section: The section the key is in
+        :param key:
+        :return:
+        """
         if not cls._sectionExists(config=config, section=section):
             raise Exception("Section Not Exists", section)
 
@@ -75,6 +85,13 @@ class ConfigReader(object):
 
     @classmethod
     def getConfigValue(cls, fileName: str, section: str, key: str):
+        """
+
+        :param fileName:
+        :param section:
+        :param key:
+        :return:
+        """
         config = cls.loadConfigParser(fileName=fileName)
         if not cls._sectionExists(config=config, section=section):
             raise Exception("Section Not Exists", section)
