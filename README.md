@@ -1,6 +1,18 @@
+**Requirements**
+
+```
 sudo apt-get install python-virtualenv
 virtualenv venv
 source venv/bin/activate
-
-
-export FLASK_APP=paasAPI.py
+```
+```
+./installRequirements.sh
+```
+Create settings file _settings.conf_ as follows:
+ ```
+[ElasticSearch]
+host = "localhost"
+port = 9200
+index = "paas"
+doc_type = "pokemon"
+```
