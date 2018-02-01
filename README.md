@@ -5,10 +5,11 @@ sudo apt-get install python-virtualenv
 virtualenv venv
 source venv/bin/activate
 ```
+Install Pip requirements
 ```bash
 ./installRequirements.sh
 ```
-Create settings file _settings.conf_ as follows:
+Create settings file for Elastic Search configurations _settings.conf_ as follows:
  ```
 [ElasticSearch]
 host = "localhost"
