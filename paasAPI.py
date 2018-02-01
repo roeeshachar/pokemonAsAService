@@ -1,5 +1,5 @@
 import logging
-from logging.handlers import RotatingFileHandler, TimedRotatingFileHandler
+from logging.handlers import TimedRotatingFileHandler
 
 from flask import Flask
 from flask import jsonify
@@ -23,8 +23,21 @@ def createNewPokemon():
         return jsonify(message="Pokemon Already Exists With Given Pokadex Id", id=pokadexId,
                        success=False), STATUS_CODE_CONFLICT
 
-    pokemonDocument = elasticSearchWrapper.create(body=jsonObject, documentId=pokadexId)
-    return jsonify(message="Pokemon Created", pokemon=pokemonDocument, success=True), STATUS_CODE_CREATED
+    try:
+        elasticSearchWrapper.create(body=jsonObject, documentId=pokadexId)
+        pokemonDocument = elasticSearchWrapper.get(documentId=pokadexId)
+        return jsonify(message="Pokemon Created", pokemon=pokemonDocument, success=True), STATUS_CODE_CREATED
+    except BaseException as e:
+        app.logger.error(exceptionToString(e))
+        return jsonify(message="Error Creating Pokemon",
+                       success=False), STATUS_CODE_INTERNAL_ERROR
+
+
+@app.route(URL_PREFIX + "/autocomplete/<string:prefix>", methods=[METHOD_GET])
+@cache.cached(timeout=CACHE_TIMEOUT)
+def autoComplete(prefix: str):
+    results = elasticSearchWrapper.getByPrefix(prefix=prefix)
+    return jsonify(results), STATUS_CODE_OK
 
 
 @app.route(URL_PREFIX + "/get/<int:id>", methods=[METHOD_GET])
@@ -35,23 +48,6 @@ def getPokemon(id: int):
     except ElasticSearchNotFoundError as e:
         return jsonify(message="No Pokemon With Given Pokadex Id", id=id,
                        success=False), STATUS_CODE_NOT_FOUND
-
-
-@app.route(URL_PREFIX + "/log_test", methods=[METHOD_GET])
-def logTest():
-    try:
-        raise Exception("Sup")
-    except BaseException as e:
-        abort(500, e)
-    app.logger.error("An error occurred")
-    return "Log_Test"
-
-
-@app.route(URL_PREFIX + "/cache_test/<string:a>", methods=[METHOD_GET])
-@cache.cached(timeout=CACHE_TIMEOUT)
-def cacheTest(a):
-    print("cacheTest_" + a)
-    return "cacheTest_" + a
 
 
 @app.errorhandler(STATUS_CODE_NOT_FOUND)
