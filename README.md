@@ -1,6 +1,6 @@
 **Requirements**
 
-```
+```bash
 sudo apt-get install python-virtualenv
 virtualenv venv
 source venv/bin/activate
