@@ -16,3 +16,5 @@ port = 9200
 index = "paas"
 doc_type = "pokemon"
 ```
+
+To run the server run app file _paasAPI.py_
